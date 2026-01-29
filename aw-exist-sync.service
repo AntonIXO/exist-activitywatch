@@ -1,0 +1,26 @@
+[Unit]
+Description=ActivityWatch to Exist.io Sync Service
+After=network-online.target
+Wants=network-online.target
+Documentation=file:///home/antonix/exist/activitywatch-exist/README.md
+
+[Service]
+Type=oneshot
+User=antonix
+Group=antonix
+WorkingDirectory=/home/antonix/exist/activitywatch-exist
+ExecStart=/usr/bin/python3 /home/antonix/exist/activitywatch-exist/sync.py
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aw-exist-sync
+
+# Timeout
+TimeoutStartSec=120
+
+# Environment
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=multi-user.target

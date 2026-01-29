@@ -1,0 +1,158 @@
+╔══════════════════════════════════════════════════════════════════╗
+║           ACTIVITYWATCH → EXIST.IO SYNC QUICK REFERENCE         ║
+╚══════════════════════════════════════════════════════════════════╝
+
+PROJECT: /home/antonix/exist/activitywatch-exist/
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CURRENT STATUS: ✅ CRON JOB INSTALLED (runs every hour)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 MOST USEFUL COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test sync manually:
+  cd /home/antonix/exist/activitywatch-exist && python3 sync.py
+
+View live logs:
+  tail -f /tmp/aw-exist-sync.log
+
+View cron jobs:
+  crontab -l
+
+Edit cron schedule:
+  crontab -e
+
+Remove cron job:
+  crontab -r
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGING SYNC FREQUENCY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current: 0 * * * * (every hour)
+
+crontab -e
+
+Then change to:
+  */15 * * * *     (every 15 min)
+  */30 * * * *     (every 30 min)
+  0 */6 * * *      (every 6 hours)
+  55 23 * * *      (11:55 PM daily)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CUSTOMIZING WHAT'S TRACKED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Edit: config.py
+
+Change tracked apps (social networks):
+  SOCIAL_APPS = ["telegram-desktop", "Signal", ...]
+
+Change tracked sites (AI assistants):
+  GPT_DOMAINS = ["chatgpt.com", "gemini.google.com", ...]
+
+Adjust focus score sensitivity:
+  FOCUS_SCORE_K = 0.05        (higher = stricter scoring)
+  NOISE_THRESHOLD_SEC = 5     (filter quick app switches)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SYNCED METRICS (in Exist.io)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. screen_time        (minutes/day)
+2. social_networks    (minutes/day)
+3. ai_assistants      (minutes/day)
+4. focus_score        (0-100 scale)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FOCUS SCORE INTERPRETATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+80-100   🧘 Deep work machine
+60-79    ✅ Good focus
+40-59    ⚠️  Moderate fragmentation
+20-39    🔶 Highly fragmented
+0-19     🚨 Severe, do dopamine detox!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILES OVERVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Core scripts:
+  sync.py                - Main sync script
+  config.py              - Settings (EDIT THIS)
+  activitywatch_client.py - AW integration
+  exist_client.py        - Exist.io integration
+  focus_analyzer.py      - Focus score engine
+
+Setup helpers:
+  setup_auto_sync.sh     - Interactive setup
+  aw-exist-sync.service  - Systemd service
+  aw-exist-sync.timer    - Systemd timer
+
+Documentation:
+  INSTALLATION.md        - Quick start
+  README.md              - Features
+  SETUP_AUTO_SYNC.md     - Detailed guide
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sync not running:
+  1. Check: crontab -l
+  2. Test: cd /home/antonix/exist/activitywatch-exist && python3 sync.py
+  3. Logs: tail -f /tmp/aw-exist-sync.log
+
+No data in Exist.io:
+  1. Verify token in config.py
+  2. ActivityWatch must be running: ps aux | grep aw-server
+  3. Check logs: tail -f /tmp/aw-exist-sync.log
+
+Want to switch to Systemd:
+  sudo cp aw-exist-sync.* /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now aw-exist-sync.timer
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW THE FOCUS SCORE WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Algorithm:
+  base = 100 × e^(-k × switches/hour)
+  bonus = min(20, median_session_minutes)
+  penalty = entropy × 5
+  score = base + bonus - penalty
+
+What improves it:
+  ✓ Fewer app switches
+  ✓ Longer focus sessions
+  ✓ Working in fewer apps
+  ✗ Context switching
+  ✗ Fragmented attention
+  ✗ Using many apps
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ONE-LINERS (Copy & Paste)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Install cron (if not done):
+  crontab -l || echo "0 * * * * cd /home/antonix/exist/activitywatch-exist && /usr/bin/python3 sync.py >> /tmp/aw-exist-sync.log 2>&1" | crontab -
+
+Test sync:
+  cd /home/antonix/exist/activitywatch-exist && python3 sync.py
+
+Monitor logs:
+  tail -f /tmp/aw-exist-sync.log
+
+Change to every 30 minutes:
+  crontab -e  # then change first line to: */30 * * * *
+
+Check next scheduled run:
+  date && crontab -l | grep sync
+
+═══════════════════════════════════════════════════════════════════
+
+All set! Your data syncs automatically to Exist.io every hour.
+

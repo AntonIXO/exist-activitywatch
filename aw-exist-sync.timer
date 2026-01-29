@@ -1,0 +1,28 @@
+[Unit]
+Description=ActivityWatch to Exist.io Sync Timer
+Documentation=file:///home/antonix/exist/activitywatch-exist/README.md
+
+[Timer]
+# Run every hour at the top of the hour
+OnBootSec=5min
+OnUnitActiveSec=1h
+
+# Alternative schedules (uncomment one):
+# Every 30 minutes:
+# OnUnitActiveSec=30min
+
+# Every 15 minutes:
+# OnUnitActiveSec=15min
+
+# At specific times (9 AM, 12 PM, 3 PM, 6 PM, 11 PM):
+# OnCalendar=*-*-* 09:00,12:00,15:00,18:00,23:00:00
+
+# Run immediately after boot, then every hour
+# OnBootSec=1min
+# OnUnitActiveSec=1h
+
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
