@@ -15,7 +15,12 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 
-from activitywatch_client import get_events_for_date, find_window_bucket
+from activitywatch_client import (
+    get_events_for_date,
+    find_window_bucket,
+    get_not_afk_intervals,
+    filter_events_by_not_afk,
+)
 
 from config import (
     NOISE_THRESHOLD_SEC,
@@ -46,11 +51,13 @@ class FocusMetrics:
 
 
 def get_window_events_for_date(date: datetime) -> List[dict]:
-    """Get window events for a specific date."""
+    """Get window events for a specific date, filtered to exclude AFK time."""
     bucket = find_window_bucket()
     if not bucket:
         return []
-    return get_events_for_date(bucket, date)
+    events = get_events_for_date(bucket, date)
+    not_afk = get_not_afk_intervals(date)
+    return filter_events_by_not_afk(events, not_afk)
 
 
 def debounce_events(events: List[dict], noise_threshold_sec: float = None) -> List[dict]:

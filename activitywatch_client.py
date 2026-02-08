@@ -2,7 +2,7 @@
 
 import requests
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from urllib.parse import urlparse
 
 from config import (
@@ -40,7 +40,7 @@ def find_afk_bucket() -> Optional[str]:
 
 def find_web_bucket() -> Optional[str]:
     """Find the aw-watcher-web bucket for the browser."""
-    return find_bucket_by_prefix("aw-watcher-web")
+    return find_bucket_by_prefix("aw-watcher-web-brave_localhost")
 
 
 def get_events_for_date(bucket_id: str, date: datetime) -> List[dict]:
@@ -66,6 +66,67 @@ def get_events_for_date(bucket_id: str, date: datetime) -> List[dict]:
     )
     response.raise_for_status()
     return response.json()
+
+
+def get_not_afk_intervals(date: datetime) -> List[Tuple[datetime, datetime]]:
+    """
+    Get time intervals when user was NOT AFK for a specific date.
+
+    Returns list of (start, end) datetime tuples for not-afk periods.
+    """
+    afk_bucket = find_afk_bucket()
+    if not afk_bucket:
+        return []
+
+    events = get_events_for_date(afk_bucket, date)
+    intervals = []
+    for event in events:
+        if event.get("data", {}).get("status") == "not-afk":
+            start = datetime.fromisoformat(event["timestamp"].replace("Z", "+00:00"))
+            duration = event.get("duration", 0)
+            end = start + timedelta(seconds=duration)
+            intervals.append((start, end))
+
+    intervals.sort(key=lambda x: x[0])
+    return intervals
+
+
+def _overlap_seconds(ev_start: datetime, ev_end: datetime,
+                     intervals: List[Tuple[datetime, datetime]]) -> float:
+    """Calculate total seconds an event overlaps with not-afk intervals."""
+    total = 0.0
+    for intv_start, intv_end in intervals:
+        overlap_start = max(ev_start, intv_start)
+        overlap_end = min(ev_end, intv_end)
+        if overlap_start < overlap_end:
+            total += (overlap_end - overlap_start).total_seconds()
+    return total
+
+
+def filter_events_by_not_afk(events: List[dict],
+                              not_afk_intervals: List[Tuple[datetime, datetime]]) -> List[dict]:
+    """
+    Filter events to only include time overlapping with not-afk intervals.
+
+    Returns new event list with adjusted durations (AFK time excluded).
+    """
+    if not not_afk_intervals:
+        return []
+
+    filtered = []
+    for event in events:
+        ts = event.get("timestamp", "")
+        duration = event.get("duration", 0)
+        if not ts or duration <= 0:
+            continue
+        ev_start = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        ev_end = ev_start + timedelta(seconds=duration)
+        active_secs = _overlap_seconds(ev_start, ev_end, not_afk_intervals)
+        if active_secs > 0:
+            new_event = dict(event)
+            new_event["duration"] = active_secs
+            filtered.append(new_event)
+    return filtered
 
 
 def get_screen_time_for_date(date: datetime) -> float:
@@ -110,8 +171,8 @@ def get_social_time_for_date(date: datetime) -> float:
         raise RuntimeError("Could not find window bucket")
     
     events = get_events_for_date(window_bucket, date)
-    
-    # Sum up duration of social app events
+    not_afk = get_not_afk_intervals(date)
+    events = filter_events_by_not_afk(events, not_afk)
     total_seconds = 0
     for event in events:
         app = event.get("data", {}).get("app", "").lower()
@@ -140,6 +201,8 @@ def get_gpt_time_for_date(date: datetime) -> float:
         return 0
     
     events = get_events_for_date(web_bucket, date)
+    not_afk = get_not_afk_intervals(date)
+    events = filter_events_by_not_afk(events, not_afk)
     
     # Sum up duration of GPT domain events
     total_seconds = 0
