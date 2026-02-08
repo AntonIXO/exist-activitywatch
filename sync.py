@@ -41,6 +41,7 @@ from config import (
     EXIST_GPT_ATTR,
     EXIST_FOCUS_SCORE_ATTR,
 )
+from sync_state import mark_synced, get_unsynced_dates, cleanup_old_entries
 
 
 def sync_date(date: datetime, dry_run: bool = False) -> bool:
@@ -95,6 +96,7 @@ def sync_date(date: datetime, dry_run: bool = False) -> bool:
         
         if all_ok:
             print("  ✓ Pushed to Exist.io")
+            mark_synced(date)
             
     except Exception as e:
         print(f"  ✗ Error: {e}")
@@ -127,6 +129,11 @@ def main():
         "--setup",
         action="store_true",
         help="Only set up Exist.io attributes, don't sync"
+    )
+    parser.add_argument(
+        "--no-backfill",
+        action="store_true",
+        help="Skip automatic backfill of missed days"
     )
     
     args = parser.parse_args()
@@ -162,11 +169,23 @@ def main():
         dates = [today - timedelta(days=i) for i in range(args.days)]
         dates.reverse()  # Oldest first
     
+    # Backfill: add any unsynced dates from the past 7 days
+    if not args.no_backfill and not args.date:
+        backfill_dates = get_unsynced_dates()
+        requested = {d.strftime("%Y-%m-%d") for d in dates}
+        extras = [d for d in backfill_dates if d.strftime("%Y-%m-%d") not in requested]
+        if extras:
+            print(f"Backfilling {len(extras)} missed day(s)...")
+            dates = sorted(set(extras + dates), key=lambda d: d.strftime("%Y-%m-%d"))
+    
     # Sync each date
     success_count = 0
     for date in dates:
         if sync_date(date, args.dry_run):
             success_count += 1
+    
+    # Periodic cleanup of old state entries
+    cleanup_old_entries()
     
     print(f"\nSynced {success_count}/{len(dates)} days")
     

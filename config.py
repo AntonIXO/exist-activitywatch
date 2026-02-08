@@ -51,3 +51,12 @@ FRAGMENTATION_THRESHOLD_MIN = 2
 # k=0.05: 20 switches/hr -> score 37, 50 switches/hr -> score 8
 # k=0.03: 20 switches/hr -> score 55, 50 switches/hr -> score 22
 FOCUS_SCORE_K = 0.05
+
+# --- Sync State Configuration ---
+
+# Path to the sync state file (stores which dates were successfully synced)
+import os as _os
+SYNC_STATE_FILE = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "sync_state.json")
+
+# Number of past days to check for missed syncs during automatic backfill
+BACKFILL_DAYS = 7
